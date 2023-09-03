@@ -1,17 +1,77 @@
 #include <iostream>
 #include <string>
 #include <fstream>
+#include <map>
 
 #include "include/httplib.h"
 
 std::string host;
 int port;
 
-std::string configPath = "./config.json";
+std::string configPath = "config.conf";
+
+std::string readFile(std::string path) {
+	std::fstream file(path.c_str());
+
+	if(!file.is_open()) return "";
+
+	std::string line;
+	std::string text;
+
+	while(getline(file, line)) {
+		text.append(line);
+		text.append("\n");
+	}
+
+	file.close();
+
+	return text;
+}
+
+std::map<std::string, std::string> parseConf(std::string text) {
+	std::map<std::string, std::string> lines;
+
+	int pointer = 0;
+	bool searchingOption = true;
+
+	while(text[pointer] != '\0') { // Repeating until we're at the end of the line
+		std::string option = "";
+		std::string value = "";
+
+		while(text[pointer] != '\n') { // Each of the config items are seperated by \n
+			const char* character = &text[pointer];
+
+			if(searchingOption) {
+				if(*character == ':') {
+					searchingOption = false;
+				
+					continue;
+				}
+
+				option.append(character);
+			} else {
+				value.append(character);
+			}
+
+			pointer++;
+		}
+
+		lines.insert({option, value});
+
+		searchingOption = true;
+	}
+
+	return lines;
+}
 
 int main() {
-	host = "0.0.0.0";
-	port = 8080;
+	// Getting config data
+	std::string configText = readFile(configPath);
+	std::map<std::string, std::string> configData = parseConf(configText);
+
+	// Moving config data to variables
+	host = configData.at("host");
+	port = std::stoi(configData.at("port"));
 
 	// Server setup
 	std::cout << "Starting server on host: " << host << ":" << port << "\n";
